@@ -7,8 +7,8 @@ import "strconv"
 import "sort"
 import "time"
 
-var nameMap = make(map[string][]*CityToken)
-var idMap = make(map[int64][]*CityToken)
+var nameMap = map[string][]*CityToken{}
+var idMap = map[int64][]*CityToken{}
 
 func init() {
 	start := time.Now().Unix()
