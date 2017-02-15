@@ -9,6 +9,7 @@ import "time"
 
 var nameMap = map[string][]*CityToken{}
 var idMap = map[int64][]*CityToken{}
+var names = []string{}
 
 func init() {
 	start := time.Now().Unix()
@@ -44,7 +45,7 @@ func init() {
 		sort.Sort(pCityTokeSliceForName(value))
 	}
 
-	for _, value := range nameMap {
+	for key, value := range nameMap {
 		sort.Sort(pCityTokeSliceForLevel(value))
 
 		for _, v := range value {
@@ -54,6 +55,8 @@ func init() {
 				}
 			}
 		}
+
+		names = append(names, key)
 	}
 
 	fmt.Println(time.Now().Unix() - start)
