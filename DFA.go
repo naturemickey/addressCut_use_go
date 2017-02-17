@@ -17,3 +17,15 @@ func newDFA(names []string) *DFA {
 
 	return dfa
 }
+
+func (this *DFA) scan(s string) []string {
+	currentState := this.startState
+	currentIdx := 0
+
+	var currentAccepted *DFAState = nil
+	currentAcceptedIdx := 0
+
+	fromIdx := 0
+
+	return []string{}
+}
