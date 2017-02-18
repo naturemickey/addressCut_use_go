@@ -1,5 +1,9 @@
 package main
 
+import (
+	"strings"
+)
+
 var dCity = NewStringSet()
 var hmtCity = NewStringSet()
 
@@ -10,10 +14,6 @@ type Address struct {
 	addrList        []string
 	children        []*Address
 	parent          *Address
-}
-
-func newAddress2(ct *CityToken, addrStr string, parent *Address) *Address {
-	return &Address{value: ct, addrReal: addrStr, parent: parent, children: []*Address{}}
 }
 
 func newAddress(originalAddress string, addrList []string) *Address {
@@ -73,13 +73,11 @@ func getRelationship(ct1 *CityToken, ct2 *CityToken) int {
 	if ct1.level > ct2.level {
 		return -1 * getRelationship(ct2, ct1)
 	}
-	for {
-		if ct1.level < ct2.level && ct2.parent != nil {
-			if ct2.parent.id == ct1.id {
-				return 1
-			}
-			ct2 = ct2.parent
+	for ct1.level < ct2.level && ct2.parent != nil {
+		if ct2.parent.id == ct1.id {
+			return 1
 		}
+		ct2 = ct2.parent
 	}
 	return 0
 }
@@ -124,11 +122,171 @@ func (this *Address) breakTreeRecu() [][]*Address {
 		for _, c := range this.children {
 			for _, fl := range c.breakTreeRecu() {
 				if this.value != nil {
-					fl = append([]*Address{this}, this)
+					fl = append([]*Address{this}, fl...)
 				}
 				res = append(res, fl)
 			}
 		}
 	}
+	return res
+}
+
+func (this *Address) choose(ll [][]*Address, idx int) []*Address {
+	if len(ll) == 0 {
+		return []*Address{}
+	}
+	if len(ll) == 1 {
+		return ll[0]
+	}
+	res1 := [][]*Address{}
+	level := 999999
+	for _, l := range ll {
+		if len(l) > idx {
+			a := l[idx]
+			if a.value != nil {
+				if level >= 3 && a.value.level < level {
+					res1 = [][]*Address{}
+					level = a.value.level
+					res1 = append(res1, l)
+				} else if a.value.level == level || (level <= 2 && a.value.level <= 2) {
+					res1 = append(res1, l)
+				}
+			}
+		}
+	}
+
+	if len(res1) == 1 {
+		return res1[0]
+	}
+
+	isStd := false
+	toRecu := false
+	res2 := [][]*Address{}
+	for _, l := range res1 {
+		a := l[idx]
+		if a.value.level < 2 {
+			res2 = res1
+			for _, l2 := range res1 {
+				toRecu = toRecu || len(l2) > idx+1
+			}
+			break
+		}
+		if isStd {
+			if len(a.value.name) == len(a.addrReal) {
+				res2 = append(res2, l)
+				toRecu = toRecu || len(l) > idx+1
+			}
+		} else {
+			if len(a.value.name) == len(a.addrReal) {
+				res2 = [][]*Address{}
+				toRecu = false
+				isStd = true
+			}
+			res2 = append(res2, l)
+			toRecu = toRecu || len(l) > idx+1
+		}
+	}
+	if toRecu {
+		return this.choose(res2, idx+1)
+	}
+	if len(res2) == 0 {
+		return []*Address{}
+	}
+	if len(res2) == 1 {
+		return res2[0]
+	}
+	var res []*Address = nil
+	for _, l := range res2 {
+		if res == nil {
+			res = l
+		} else {
+			a1 := res[idx]
+			a2 := l[idx]
+			if indexOf(this.addrList, a2.addrReal) < indexOf(this.addrList, a1.addrReal) {
+				res = l
+			}
+		}
+	}
+	return res
+}
+
+func indexOf(l []string, s string) int {
+	for i, x := range l {
+		if x == s {
+			return i
+		}
+	}
+	return -1
+}
+
+func (this *Address) getCutRes() ([]*CityToken, string) {
+	return this.fixToToken(this.choose(this.breakTree(), 0))
+}
+
+func (this *Address) fixToToken(addrList []*Address) ([]*CityToken, string) {
+	detailAddress := this.originalAddress
+	if len(addrList) == 0 {
+		return []*CityToken{}, detailAddress
+	}
+	addr := addrList[len(addrList)-1]
+	ct := idMap[addr.value.id][0]
+	lastRealAddr := addr.addrReal
+	lastStandardAddr := ct.name
+	ctList := []*CityToken{}
+	for ct != nil {
+		ctList = append([]*CityToken{ct}, ctList...)
+		ct = ct.parent
+	}
+	if lastRealAddr != "" || lastStandardAddr != "" {
+		detailAddress = this.subOrigAddr(lastRealAddr, lastStandardAddr)
+	}
+	return ctList, detailAddress
+}
+func (this *Address) subOrigAddr(addr string, stdAddr string) string {
+	idx := -1
+	if stdAddr != "" {
+		idx = strings.LastIndex(this.originalAddress, stdAddr)
+	}
+	if idx < 0 && addr != "" {
+		idx = strings.LastIndex(this.originalAddress, addr)
+	}
+	if idx > 0 {
+		buf := []byte(this.originalAddress)
+		length := len(buf)
+		buf2 := []byte{}
+		for i := idx; i < length; i++ {
+			buf2 = append(buf2, buf[i])
+		}
+		return string(buf2)
+	}
+	return this.originalAddress
+}
+
+func (this *Address) info() *Info {
+	res := &Info{}
+	ctList, detailAddress := this.getCutRes()
+	res.detailAddress = detailAddress
+	if ctList != nil {
+		for _, ct := range ctList {
+			switch ct.level {
+			case 1:
+				res.provinceAddress = ct.name
+			case 2:
+				res.cityAddress = ct.name
+			case 3:
+				res.areaAddress = ct.name
+			case 4:
+				res.townAddress = ct.name
+			}
+		}
+		if len(ctList) == 1 {
+			if dCity.contains(res.provinceAddress) {
+				res.cityAddress = res.provinceAddress + "市"
+			} else if hmtCity.contains(res.provinceAddress) {
+				res.cityAddress = res.provinceAddress
+			}
+		}
+	}
+	res.originalAddress = this.originalAddress
 	return res
 }
