@@ -13,6 +13,10 @@ func (s *DFAState) isAccepted() bool {
 	return s.name != ""
 }
 
+func (s *DFAState) tran(c rune) *DFAState {
+	return s.path[c]
+}
+
 func (s *DFAState) addPath(c rune) *DFAState {
 	if state, ok := s.path[c]; ok {
 		return state
