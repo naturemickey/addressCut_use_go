@@ -1,5 +1,8 @@
 package main
 
+var dCity = NewStringSet()
+var hmtCity = NewStringSet()
+
 type Address struct {
 	originalAddress string
 	value           *CityToken
@@ -90,8 +93,21 @@ func (this *Address) breakTree() [][]*Address {
 	}
 	this.children = childrenTmp
 
-	// TODO
-	res := [][]*Address{}
+	res := this.breakTreeRecu()
+	for idx, resIt := range res {
+		tmp := []*Address{}
+		ns := NewStringSet()
+
+		for _, a := range resIt {
+			ar := a.addrReal
+			if (a.parent != nil && a.parent.value != nil && a.value.level >= 4 && a.parent.value.level == 1 && !dCity.contains(a.parent.value.name)) || !ns.add(ar) {
+
+			} else {
+				tmp = append(tmp, a)
+			}
+		}
+		res[idx] = tmp
+	}
 
 	return res
 }

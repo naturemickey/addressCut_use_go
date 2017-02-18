@@ -62,3 +62,13 @@ func init() {
 	dfa = newDFA(names)
 	fmt.Println("DFA init cost:", (time.Now().UnixNano()-start)/1000000, "ms")
 }
+
+func init() {
+	dCity.add("北京")
+	dCity.add("上海")
+	dCity.add("天津")
+	dCity.add("重庆")
+
+	hmtCity.add("香港")
+	hmtCity.add("澳門")
+}
